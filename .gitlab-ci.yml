@@ -1,0 +1,20 @@
+stages:
+  - check
+
+lint:
+  stage: check
+  image: python:3.12
+  before_script:
+    - pip install uv
+  script:
+    - uv sync
+    - uv run ruff check src/ tests/
+
+test:
+  stage: check
+  image: python:3.12
+  before_script:
+    - pip install uv
+  script:
+    - uv sync
+    - uv run pytest
