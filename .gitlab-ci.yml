@@ -1,0 +1,80 @@
+# Horae CI — local GitLab runners + registry
+# Replace .gitlab-ci.yml in the horae repo after migration
+#
+# Changes from gitlab.com version:
+#   - Registry: gitlab.hephaestus:5050 (local, fast push)
+#   - Tags: hephaestus for all jobs (CPU-only project)
+#   - Upgraded from python:3.12 + pip install uv → uv image
+#   - Added typecheck (pyright), Docker build via Kaniko
+#   - Content-addressed image tags
+
+variables:
+  LOCAL_REGISTRY: "gitlab.hephaestus:5050/mipkovich/horae"
+  UV_CACHE_DIR: .uv-cache
+  UV_LINK_MODE: copy
+
+default:
+  image: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+  before_script:
+    - uv sync --frozen
+  after_script:
+    - uv cache prune --ci
+  cache:
+    key:
+      files:
+        - uv.lock
+    paths:
+      - .uv-cache/
+
+stages:
+  - check
+  - build
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+lint:
+  stage: check
+  tags: [hephaestus]
+  script:
+    - uv run ruff check src/ tests/
+    - uv run ruff format --check src/ tests/
+
+typecheck:
+  stage: check
+  tags: [hephaestus]
+  script:
+    - uv run pyright
+
+test:
+  stage: check
+  tags: [hephaestus]
+  script:
+    - uv run pytest --junitxml=report.xml -q --tb=short
+  artifacts:
+    when: always
+    reports:
+      junit: report.xml
+
+docker-build:
+  stage: build
+  tags: [hephaestus, build]
+  image:
+    name: gcr.io/kaniko-project/executor:v1.23.2-debug
+    entrypoint: [""]
+  before_script: []
+  after_script: []
+  cache: {}
+  script:
+    - BUILD_HASH=$(cat Dockerfile pyproject.toml uv.lock | sha256sum | cut -c1-16)
+    - /kaniko/executor
+        --context "${CI_PROJECT_DIR}"
+        --dockerfile "${CI_PROJECT_DIR}/Dockerfile"
+        --destination "${LOCAL_REGISTRY}:${BUILD_HASH}"
+        --destination "${LOCAL_REGISTRY}:latest"
+        --cache=true
+        --cache-repo="${LOCAL_REGISTRY}/cache"
+  rules:
+    - changes: [Dockerfile, pyproject.toml, uv.lock, "src/**/*"]
