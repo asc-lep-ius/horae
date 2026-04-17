@@ -12,3 +12,5 @@ class Settings(BaseSettings):
     default_duration_minutes: int = 60
     ollama_url: str = "http://localhost:11434"
     ollama_model: str = "llama3.2"
+    tiss_ical_url: str = ""
+    sync_calendar: str = "uni"
