@@ -15,6 +15,7 @@ env/
 .pyright/
 .mypy_cache/
 .pytest_cache/
+.coverage
 
 *.so
 *.dylib
