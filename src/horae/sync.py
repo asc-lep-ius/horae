@@ -263,6 +263,7 @@ def _content_changed(existing_data: str, new_vevent: icalendar.Component) -> boo
                     return True
             return False
     except Exception:
+        log.debug("Failed to compare existing event data, treating as changed", exc_info=True)
         return True
     return True
 
