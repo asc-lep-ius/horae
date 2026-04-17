@@ -239,7 +239,9 @@ dependencies = [
     { name = "caldav" },
     { name = "dateparser" },
     { name = "fastapi" },
+    { name = "filelock" },
     { name = "httpx" },
+    { name = "icalendar" },
     { name = "pydantic-settings" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -259,7 +261,9 @@ requires-dist = [
     { name = "caldav", specifier = ">=1.4" },
     { name = "dateparser", specifier = ">=1.2" },
     { name = "fastapi", specifier = ">=0.115" },
+    { name = "filelock", specifier = ">=3.0" },
     { name = "httpx", specifier = ">=0.28" },
+    { name = "icalendar", specifier = ">=6.0" },
     { name = "pydantic-settings", specifier = ">=2.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.34" },
 ]
