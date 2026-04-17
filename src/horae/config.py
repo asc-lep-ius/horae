@@ -14,3 +14,5 @@ class Settings(BaseSettings):
     ollama_model: str = "llama3.2"
     tiss_ical_url: str = ""
     sync_calendar: str = "uni"
+    sync_interval_minutes: int = 120
+    sync_enabled: bool = True

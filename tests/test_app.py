@@ -1,10 +1,12 @@
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 
 from horae.models import CalendarInfo
 from horae.parser import ParseResult
+from horae.scheduler import SyncScheduler, SyncStatus
+from horae.sync import SyncResult
 
 
 async def test_health_returns_ok(async_client: httpx.AsyncClient) -> None:
@@ -116,3 +118,79 @@ async def test_create_event_caldav_error(async_client: httpx.AsyncClient) -> Non
 
     assert response.status_code == 404
     assert "not found" in response.json()["detail"].lower()
+
+
+# ---------------------------------------------------------------------------
+# Sync endpoint tests
+# ---------------------------------------------------------------------------
+
+
+async def test_sync_status_returns_200(async_client: httpx.AsyncClient) -> None:
+    from horae.app import app
+
+    mock_scheduler = MagicMock(spec=SyncScheduler)
+    mock_scheduler.status = SyncStatus()
+    app.state.scheduler = mock_scheduler
+    try:
+        response = await async_client.get("/sync/status")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["is_running"] is False
+        assert data["last_run"] is None
+        assert data["last_result"] is None
+        assert data["last_error"] is None
+        assert data["next_run"] is None
+    finally:
+        del app.state.scheduler
+
+
+async def test_sync_status_returns_503_without_scheduler(async_client: httpx.AsyncClient) -> None:
+    response = await async_client.get("/sync/status")
+    assert response.status_code == 503
+
+
+async def test_sync_trigger_returns_202(async_client: httpx.AsyncClient) -> None:
+    from horae.app import app
+
+    mock_scheduler = MagicMock(spec=SyncScheduler)
+    app.state.scheduler = mock_scheduler
+    try:
+        response = await async_client.post("/sync/trigger")
+        assert response.status_code == 202
+        assert response.json() == {"detail": "Sync triggered"}
+        mock_scheduler.trigger.assert_called_once()
+    finally:
+        del app.state.scheduler
+
+
+async def test_sync_trigger_returns_503_without_scheduler(async_client: httpx.AsyncClient) -> None:
+    response = await async_client.post("/sync/trigger")
+    assert response.status_code == 503
+
+
+async def test_sync_status_reflects_last_result(async_client: httpx.AsyncClient) -> None:
+    from horae.app import app
+
+    result = SyncResult(created=3, updated=1, unchanged=10, deleted=2)
+    status = SyncStatus(
+        last_run=datetime(2026, 4, 17, 12, 0),
+        last_result=result,
+        is_running=False,
+    )
+    mock_scheduler = MagicMock(spec=SyncScheduler)
+    mock_scheduler.status = status
+    app.state.scheduler = mock_scheduler
+    try:
+        response = await async_client.get("/sync/status")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["last_result"] == {
+            "created": 3,
+            "updated": 1,
+            "unchanged": 10,
+            "deleted": 2,
+        }
+        assert data["last_run"] is not None
+        assert data["is_running"] is False
+    finally:
+        del app.state.scheduler

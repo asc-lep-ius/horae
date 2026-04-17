@@ -23,3 +23,11 @@ class CalendarInfo(BaseModel):
 
 class HealthResponse(BaseModel):
     status: str
+
+
+class SyncStatusResponse(BaseModel):
+    last_run: datetime | None = None
+    last_result: dict[str, int] | None = None
+    last_error: str | None = None
+    next_run: datetime | None = None
+    is_running: bool = False
