@@ -3,7 +3,7 @@
 import logging
 import threading
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -40,12 +40,13 @@ class SyncScheduler:
             log.info("TISS sync disabled via HORAE_SYNC_ENABLED=false")
             return
 
+        first_run = datetime.now(UTC) + timedelta(minutes=self._settings.sync_interval_minutes)
         self._scheduler.add_job(
             self._run_sync,
             "interval",
             minutes=self._settings.sync_interval_minutes,
             id="tiss_sync",
-            next_run_time=None,  # don't run immediately on startup
+            next_run_time=first_run,
         )
         self._scheduler.start()
         self._refresh_next_run()

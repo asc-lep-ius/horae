@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from functools import lru_cache
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from starlette.responses import JSONResponse
 
 from horae.calendar import create_event, list_calendars
@@ -13,6 +13,13 @@ from horae.llm import extract_event_llm
 from horae.models import CalendarInfo, EventRequest, EventResponse, SyncStatusResponse
 from horae.parser import parse_event_text
 from horae.scheduler import SyncScheduler
+
+
+def get_scheduler(request: Request) -> SyncScheduler:
+    scheduler = getattr(request.app.state, "scheduler", None)
+    if scheduler is None:
+        raise HTTPException(503, "Scheduler not initialized")
+    return scheduler
 
 
 @lru_cache
@@ -77,8 +84,9 @@ async def get_calendars(
 
 
 @app.get("/sync/status")
-async def sync_status() -> SyncStatusResponse:
-    scheduler: SyncScheduler = app.state.scheduler
+async def sync_status(
+    scheduler: Annotated[SyncScheduler, Depends(get_scheduler)],
+) -> SyncStatusResponse:
     s = scheduler.status
     last_result = None
     if s.last_result is not None:
@@ -98,7 +106,8 @@ async def sync_status() -> SyncStatusResponse:
 
 
 @app.post("/sync/trigger", status_code=202)
-async def sync_trigger() -> JSONResponse:
-    scheduler: SyncScheduler = app.state.scheduler
+async def sync_trigger(
+    scheduler: Annotated[SyncScheduler, Depends(get_scheduler)],
+) -> JSONResponse:
     scheduler.trigger()
     return JSONResponse(status_code=202, content={"detail": "Sync triggered"})
