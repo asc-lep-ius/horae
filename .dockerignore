@@ -8,3 +8,4 @@ __pycache__
 tests/
 .pre-commit-config.yaml
 .gitlab-ci.yml
+radicale/

@@ -1,0 +1,4 @@
+# Generate a bcrypt hash: htpasswd -nbB username password
+# Then paste the line here and rename this file to 'users'
+# Example:
+# asclepius:$2b$12$...your_bcrypt_hash...
