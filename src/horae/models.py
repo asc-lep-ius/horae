@@ -21,6 +21,21 @@ class CalendarInfo(BaseModel):
     path: str
 
 
+class CalendarCreate(BaseModel):
+    name: str
+
+
+class EventInfo(BaseModel):
+    uid: str
+    summary: str
+    dtstart: datetime | None = None
+    dtend: datetime | None = None
+
+
+class ImportResult(BaseModel):
+    imported: int
+
+
 class HealthResponse(BaseModel):
     status: str
 

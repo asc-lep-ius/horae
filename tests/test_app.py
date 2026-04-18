@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 
-from horae.models import CalendarInfo
+from horae.models import CalendarInfo, EventInfo
 from horae.parser import ParseResult
 from horae.scheduler import SyncScheduler, SyncStatus
 from horae.sync import SyncResult
@@ -194,3 +194,97 @@ async def test_sync_status_reflects_last_result(async_client: httpx.AsyncClient)
         assert data["is_running"] is False
     finally:
         del app.state.scheduler
+
+
+# ---------------------------------------------------------------------------
+# Calendar management endpoint tests
+# ---------------------------------------------------------------------------
+
+
+async def test_create_calendar_success(async_client: httpx.AsyncClient) -> None:
+    cal_info = CalendarInfo(name="work", path="/user/work/")
+    with patch("horae.app.create_calendar", return_value=cal_info):
+        response = await async_client.post("/calendars", json={"name": "work"})
+
+    assert response.status_code == 201
+    assert response.json()["name"] == "work"
+    assert response.json()["path"] == "/user/work/"
+
+
+async def test_create_calendar_conflict(async_client: httpx.AsyncClient) -> None:
+    with patch("horae.app.create_calendar", side_effect=ValueError("already exists")):
+        response = await async_client.post("/calendars", json={"name": "work"})
+
+    assert response.status_code == 409
+
+
+async def test_delete_calendar_success(async_client: httpx.AsyncClient) -> None:
+    with patch("horae.app.delete_calendar"):
+        response = await async_client.delete("/calendars/work")
+
+    assert response.status_code == 204
+
+
+async def test_delete_calendar_not_found(async_client: httpx.AsyncClient) -> None:
+    with patch("horae.app.delete_calendar", side_effect=ValueError("not found")):
+        response = await async_client.delete("/calendars/nonexistent")
+
+    assert response.status_code == 404
+
+
+async def test_list_events_success(async_client: httpx.AsyncClient) -> None:
+    events = [
+        EventInfo(
+            uid="uid-1",
+            summary="Dentist",
+            dtstart=datetime(2026, 4, 10, 14, 0),
+            dtend=datetime(2026, 4, 10, 15, 0),
+        ),
+        EventInfo(uid="uid-2", summary="Lunch"),
+    ]
+    with patch("horae.app.list_events", return_value=events):
+        response = await async_client.get("/calendars/personal/events")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 2
+    assert data[0]["uid"] == "uid-1"
+    assert data[1]["summary"] == "Lunch"
+
+
+async def test_list_events_not_found(async_client: httpx.AsyncClient) -> None:
+    with patch("horae.app.list_events", side_effect=ValueError("not found")):
+        response = await async_client.get("/calendars/nonexistent/events")
+
+    assert response.status_code == 404
+
+
+async def test_import_ics_success(async_client: httpx.AsyncClient) -> None:
+    with patch("horae.app.import_ics", return_value=3):
+        response = await async_client.post(
+            "/calendars/personal/import",
+            files={"file": ("events.ics", b"BEGIN:VCALENDAR\r\nEND:VCALENDAR", "text/calendar")},
+        )
+
+    assert response.status_code == 201
+    assert response.json()["imported"] == 3
+
+
+async def test_import_ics_not_found(async_client: httpx.AsyncClient) -> None:
+    with patch("horae.app.import_ics", side_effect=ValueError("Calendar 'bad' not found")):
+        response = await async_client.post(
+            "/calendars/bad/import",
+            files={"file": ("events.ics", b"BEGIN:VCALENDAR\r\nEND:VCALENDAR", "text/calendar")},
+        )
+
+    assert response.status_code == 404
+
+
+async def test_import_ics_invalid_data(async_client: httpx.AsyncClient) -> None:
+    with patch("horae.app.import_ics", side_effect=ValueError("Invalid ICS data")):
+        response = await async_client.post(
+            "/calendars/personal/import",
+            files={"file": ("events.ics", b"not ics", "text/calendar")},
+        )
+
+    assert response.status_code == 422
