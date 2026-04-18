@@ -28,18 +28,21 @@ from horae.sync import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_feed(*events: tuple[str, str, str]) -> bytes:
     """Build a minimal iCal feed from (summary, dtstart, dtend) tuples."""
     lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//TISS//Test//EN"]
     for i, (summary, start, end) in enumerate(events):
-        lines.extend([
-            "BEGIN:VEVENT",
-            f"UID:tiss-unstable-{i}@tiss.tuwien.ac.at",
-            f"SUMMARY:{summary}",
-            f"DTSTART:{start}",
-            f"DTEND:{end}",
-            "END:VEVENT",
-        ])
+        lines.extend(
+            [
+                "BEGIN:VEVENT",
+                f"UID:tiss-unstable-{i}@tiss.tuwien.ac.at",
+                f"SUMMARY:{summary}",
+                f"DTSTART:{start}",
+                f"DTEND:{end}",
+                "END:VEVENT",
+            ]
+        )
     lines.append("END:VCALENDAR")
     return "\r\n".join(lines).encode()
 
@@ -92,9 +95,13 @@ def _sync_settings() -> Settings:
     )
 
 
-def _make_vevent(summary: str = "Lecture", dtstart: str = "20260401T100000",
-                 dtend: str = "20260401T120000", location: str = "",
-                 description: str = "") -> icalendar.Event:
+def _make_vevent(
+    summary: str = "Lecture",
+    dtstart: str = "20260401T100000",
+    dtend: str = "20260401T120000",
+    location: str = "",
+    description: str = "",
+) -> icalendar.Event:
     """Build an icalendar VEVENT component."""
     ev = icalendar.Event()
     ev.add("UID", _stable_uid(summary, dtstart, dtend))
@@ -128,11 +135,14 @@ class TestStableUid:
         uid_b = _stable_uid("Lecture B", "20260401T100000", "20260401T120000")
         assert uid_a != uid_b
 
-    @pytest.mark.parametrize("summary,dtstart,dtend", [
-        ("", "", ""),
-        ("X", "20260101T000000", "20260101T010000"),
-        ("Long " * 50, "20260601T080000", "20260601T180000"),
-    ])
+    @pytest.mark.parametrize(
+        "summary,dtstart,dtend",
+        [
+            ("", "", ""),
+            ("X", "20260101T000000", "20260101T010000"),
+            ("Long " * 50, "20260601T080000", "20260601T180000"),
+        ],
+    )
     def test_always_returns_valid_uid(self, summary: str, dtstart: str, dtend: str) -> None:
         uid = _stable_uid(summary, dtstart, dtend)
         assert uid.startswith("horae-")
@@ -242,7 +252,9 @@ class TestParseFeed:
 
     def test_event_without_dtend_falls_back_to_dtstart(self) -> None:
         lines = [
-            "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//TISS//Test//EN",
+            "BEGIN:VCALENDAR",
+            "VERSION:2.0",
+            "PRODID:-//TISS//Test//EN",
             "BEGIN:VEVENT",
             "UID:tiss-no-end@tiss.tuwien.ac.at",
             "SUMMARY:All-Day",
@@ -256,7 +268,9 @@ class TestParseFeed:
 
     def test_event_without_summary(self) -> None:
         lines = [
-            "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//TISS//Test//EN",
+            "BEGIN:VCALENDAR",
+            "VERSION:2.0",
+            "PRODID:-//TISS//Test//EN",
             "BEGIN:VEVENT",
             "UID:tiss-no-summary@tiss.tuwien.ac.at",
             "DTSTART:20260401T100000",
@@ -570,9 +584,7 @@ class TestSyncTiss:
 
     @patch("horae.sync.caldav.DAVClient")
     @patch("horae.sync.httpx.get")
-    def test_full_cycle_create_update_delete_unchanged(
-        self, mock_get: MagicMock, mock_dav: MagicMock
-    ) -> None:
+    def test_full_cycle_create_update_delete_unchanged(self, mock_get: MagicMock, mock_dav: MagicMock) -> None:
         """Full sync cycle: one new, one unchanged, one updated, one deleted."""
         feed = _make_feed(
             ("New Lecture", "20260405T100000", "20260405T120000"),
@@ -605,9 +617,7 @@ class TestSyncTiss:
         deleted_vevent.add("DTEND", datetime(2026, 3, 1, 12, 0))
         deleted_mock = _mock_caldav_event(uid_deleted, deleted_vevent)
 
-        mock_client, mock_resp = self._setup_mocks(
-            feed, [unchanged_mock, updated_mock, deleted_mock]
-        )
+        mock_client, mock_resp = self._setup_mocks(feed, [unchanged_mock, updated_mock, deleted_mock])
         mock_get.return_value = mock_resp
         mock_dav.return_value = mock_client
 

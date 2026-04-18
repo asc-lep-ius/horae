@@ -83,9 +83,7 @@ class TestSyncSchedulerStop:
 
 class TestSyncSchedulerTrigger:
     @patch("horae.scheduler.sync_tiss")
-    def test_trigger_calls_sync_in_background(
-        self, mock_sync: MagicMock, sync_settings: Settings
-    ) -> None:
+    def test_trigger_calls_sync_in_background(self, mock_sync: MagicMock, sync_settings: Settings) -> None:
         mock_sync.return_value = SyncResult(created=1)
         scheduler = SyncScheduler(sync_settings)
 
@@ -98,9 +96,7 @@ class TestSyncSchedulerTrigger:
             mock_thread.start.assert_called_once()
 
     @patch("horae.scheduler.sync_tiss")
-    def test_trigger_noop_when_already_running(
-        self, mock_sync: MagicMock, sync_settings: Settings
-    ) -> None:
+    def test_trigger_noop_when_already_running(self, mock_sync: MagicMock, sync_settings: Settings) -> None:
         scheduler = SyncScheduler(sync_settings)
         scheduler._status.is_running = True
 
@@ -111,9 +107,7 @@ class TestSyncSchedulerTrigger:
 
 class TestRunSync:
     @patch("horae.scheduler.sync_tiss")
-    def test_updates_last_run_and_result_on_success(
-        self, mock_sync: MagicMock, sync_settings: Settings
-    ) -> None:
+    def test_updates_last_run_and_result_on_success(self, mock_sync: MagicMock, sync_settings: Settings) -> None:
         result = SyncResult(created=2, updated=1, unchanged=5, deleted=0)
         mock_sync.return_value = result
         scheduler = SyncScheduler(sync_settings)
@@ -126,9 +120,7 @@ class TestRunSync:
         assert scheduler._status.is_running is False
 
     @patch("horae.scheduler.sync_tiss")
-    def test_sets_last_error_on_sync_errors(
-        self, mock_sync: MagicMock, sync_settings: Settings
-    ) -> None:
+    def test_sets_last_error_on_sync_errors(self, mock_sync: MagicMock, sync_settings: Settings) -> None:
         result = SyncResult(created=1, errors=["bad event", "connection lost"])
         mock_sync.return_value = result
         scheduler = SyncScheduler(sync_settings)
@@ -161,9 +153,7 @@ class TestRunSync:
         assert scheduler._status.last_error == "catastrophic failure"
 
     @patch("horae.scheduler.sync_tiss")
-    def test_is_running_true_during_execution(
-        self, mock_sync: MagicMock, sync_settings: Settings
-    ) -> None:
+    def test_is_running_true_during_execution(self, mock_sync: MagicMock, sync_settings: Settings) -> None:
         observed_running: list[bool] = []
 
         def capture_running(settings: Settings) -> SyncResult:
@@ -179,9 +169,7 @@ class TestRunSync:
         assert scheduler._status.is_running is False
 
     @patch("horae.scheduler.sync_tiss")
-    def test_is_running_false_after_exception(
-        self, mock_sync: MagicMock, sync_settings: Settings
-    ) -> None:
+    def test_is_running_false_after_exception(self, mock_sync: MagicMock, sync_settings: Settings) -> None:
         mock_sync.side_effect = RuntimeError("boom")
         scheduler = SyncScheduler(sync_settings)
 
@@ -190,9 +178,7 @@ class TestRunSync:
         assert scheduler._status.is_running is False
 
     @patch("horae.scheduler.sync_tiss")
-    def test_skips_when_already_running(
-        self, mock_sync: MagicMock, sync_settings: Settings
-    ) -> None:
+    def test_skips_when_already_running(self, mock_sync: MagicMock, sync_settings: Settings) -> None:
         scheduler = SyncScheduler(sync_settings)
         scheduler._status.is_running = True
 
@@ -222,9 +208,7 @@ class TestSyncStatus:
         assert status.next_run is None
 
     @patch("horae.scheduler.sync_tiss")
-    def test_status_reflects_last_result(
-        self, mock_sync: MagicMock, sync_settings: Settings
-    ) -> None:
+    def test_status_reflects_last_result(self, mock_sync: MagicMock, sync_settings: Settings) -> None:
         result = SyncResult(created=3, updated=2)
         mock_sync.return_value = result
         scheduler = SyncScheduler(sync_settings)
