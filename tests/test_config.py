@@ -11,7 +11,7 @@ class TestSettingsDefaults:
 
         settings = Settings()  # type: ignore[call-arg]
 
-        assert settings.radicale_url == "http://localhost:5232"
+        assert settings.radicale_url == "http://radicale:5232"
         assert settings.radicale_username == "testuser"
         assert settings.default_calendar == "personal"
         assert settings.default_duration_minutes == 60
