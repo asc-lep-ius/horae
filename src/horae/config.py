@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="HORAE_")
 
-    radicale_url: str = "http://localhost:5232"
+    radicale_url: str = "http://radicale:5232"
     radicale_username: str
     radicale_password: SecretStr
     default_calendar: str = "personal"
