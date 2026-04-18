@@ -37,7 +37,7 @@ services:
     read_only: true
     volumes:
       - radicale_data:/data
-      - ./radicale/config:/config:ro
+      - ./radicale:/config:ro
     security_opt:
       - no-new-privileges:true
     cap_drop:
